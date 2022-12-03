@@ -1,0 +1,175 @@
+def get_sec(time_str):
+    """Get seconds from time."""
+    h, m, s = time_str.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
+
+@login_required
+def influencerkontrol(request):
+  if request.method == 'POST':
+    ordernumberx = request.POST.get('ordernumber')
+    ordernumber = "'"+ordernumberx+"'"
+    infidx = request.POST.get('infid')
+    infid = "'"+infidx+"'"
+    url = "http://x-api.x.com/api/token/new"
+    payload = json.dumps({
+    "userName": "TECHOPS2",
+    "password": "7fQ-Zr*&<Vk!EJ5r"
+  })
+    headers = {
+    'accept': '*/*',
+    'Content-Type': 'application/json'
+  }
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    url2 = "http://x-api.x.com/api/v2.0/orders/orderNumber/"+ordernumberx
+    payload2={}
+    headers2 = {
+    'accept': 'text/plain',
+    'Authorization': 'Bearer '+response.text
+  }
+    response2 = requests.request("GET", url2, headers=headers2, data=payload2)
+    x=response2.text
+    y=str(x)
+    t=json.loads(y)
+    print(t['createdDateTime']) 
+    parsed_date = datetime.strptime(t['createdDateTime'], "%Y-%m-%dT%H:%M:%SZ") 
+    parsed_date += timedelta(hours=3)
+    print(parsed_date)
+    tarih = str(parsed_date)
+    datex = tarih[:10]
+    parsed_date1 = datetime.strptime(t['createdDateTime'], "%Y-%m-%dT%H:%M:%SZ") 
+    parsed_date1 += timedelta(days=1)
+    tarih = str(parsed_date1)
+    ileritarih = tarih[:10]
+    parsed_date2 = datetime.strptime(t['createdDateTime'], "%Y-%m-%dT%H:%M:%SZ") 
+    parsed_date2 += timedelta(days=-1)
+    tarih = str(parsed_date2)
+    geritarih = tarih[:10]
+    print(datex, ileritarih, geritarih)
+    date = "'"+datex+"'"  
+    print(ordernumberx, datex)
+    flow.redirect_uri = 'https://x.x.com/oauth2callback'
+    key_path = 'static/hb-davinci-prod-b71521e01f26.json'
+    project_id = 'hb-monitoring-prod'
+    credentials = service_account.Credentials.from_service_account_file(key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"],)
+    client = bigquery.Client(credentials=credentials, project=credentials.project_id,)
+    print("Mobil Sorgusu Başladı")
+    mobilkontrol = """select source, channel, pageurl, pagereferrer, ordernumber, receivedat, useragentplatform
+from  `hb-davinci-prod.davinci.flt_orderresultview_main` a
+where ordernumber = """+ordernumber+"""
+and DATE(receivedat) = """+date+""";
+"""
+    query_job = client.query(mobilkontrol)
+    results = query_job.result()
+    print(results)
+    l=[]
+    for row in query_job.result():
+      data = row
+      l.append(data)
+    print(l)
+    df = query_job.result().to_dataframe()
+    print(df)
+    htmlmobil = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
+    print("InfLink Sorgusu Başladı")
+    geritarihx = "'"+geritarih+"'"
+    ileritarihx = "'"+ileritarih+"'"
+    id = str(t['user']['refId'])
+    userid ="'"+id+"'"
+    inflink = """select event, pagepath, pageurl, page, receivedatetime, sentat, rtimestamp from `hb-davinci-prod.davinci.flt_pageload`
+where receivedat>="""+geritarihx+"""
+and receivedat<="""+ileritarihx+"""
+and source='cac'
+and page= 'Shared'
+and userid="""+userid+"""
+order by receivedat desc
+"""
+    print(inflink)
+    query_job = client.query(inflink)
+    results = query_job.result()
+    print(results)
+    df = query_job.result().to_dataframe()
+    print(df)
+    htmlinflink = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
+    j=[]
+    for row in query_job.result():
+      data = row
+      j.append(data)
+    print(j)
+    gsmnumara= str(t['user']['gsmNumber'])
+    email= str(t['user']['email'])
+    fname = str(t['user']['firstName'])
+    lname = str(t['user']['lastName'])
+    fullname = fname+" "+lname
+    flow.redirect_uri = 'https://x.x.com/oauth2callback'
+    key_path = 'static/hb-influencertech-prod-a36de25ddd4b.json'
+    project_id = 'hb-monitoring-prod'
+    credentials = service_account.Credentials.from_service_account_file(key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"],)
+    client = bigquery.Client(credentials=credentials, project=credentials.project_id,)
+    print("AppsFlyer Sorgusu Başladı")
+    appsflyer = """select attributed_touch_time, event_time, a.af_channel,a.af_adset,af_ad,a.event_name  from `hb-influencertech-prod.influencer_raw.inapps_retargeting` a
+where DATE(event_time) between """+geritarihx+""" and """+ileritarihx+"""
+and event_value like ('%"""+ordernumberx+"""%')
+--and event_value like ('"""+id+"""')
+order by attributed_touch_time desc"""
+    query_job = client.query(appsflyer)
+    results = query_job.result()
+    print(results)
+    df = query_job.result().to_dataframe()
+    print(df)
+    htmlappsflyer = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
+    k=[]
+    for row in query_job.result():
+      data = row
+      touchtime = row.attributed_touch_time
+      eventtime = row.event_time
+      k.append(data)
+    try:
+      touchtimex = datetime.strptime(touchtime[:19], "%Y-%m-%d %H:%M:%S")
+      touchtarih = str(touchtimex)
+      print("Touchtime:" + touchtarih)
+      eventutc = str(eventtime)
+      eventtimex = datetime.strptime(eventutc[:19], "%Y-%m-%d %H:%M:%S")
+      eventtarih = str(eventtimex)
+      print("Eventtime:" + eventtarih)
+      diff = str(eventtimex - touchtimex)
+      diffseconds = get_sec(diff)
+      diffsaat = diffseconds/3600
+      print("Saat Farkı: "+str(diffsaat))
+    except: 
+      touchtime=""
+      diffsaat=0  
+    infsiparisler = """select id_influencer, id_user, id_order, sku, id_buyingcategory from `hb-influencertech-prod.influencer_summary.influencer_report_sale_detail_new` where
+DATE(dt_report_day)="""+date+"""
+and id_influencer = """+infid+""""""
+    print(infsiparisler)
+    query_job = client.query(infsiparisler)
+    results = query_job.result()
+    print(results)
+    df = query_job.result().to_dataframe()
+    print(df)
+    htmlinfsiparisler = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
+    p=[]
+    for row in query_job.result():
+      data = row
+      p.append(data)
+    print(p)
+    urun = str(t['initialOrderLines'][0]['sku'])
+    sku ="'"+urun+"'"
+    print(sku)
+    print(userid, gsmnumara, email, fullname)
+    if diffsaat > 24 or diffsaat == 24 :
+        durum = "false"
+        print("Touchtime ve eventtime farkı 24 saatten fazla") 
+    elif diffsaat < 24 and diffsaat > 0:
+        durum = "true"
+        print("Touchtime ve eventtime farkı 24 saatten az")
+    else: 
+        durum = "Hesaplanamadı"  
+        print("Touchtime ve eventtime farkı hesaplanamadı")  
+    tablo = "aktif"
+    tefark= "{:.2f}".format(diffsaat)
+    logkadi = request.user
+    logadsoyad = logkadi.first_name +" "+ logkadi.last_name
+    views.influencerlog(logadsoyad, logkadi)          
+    return render(request,'influencer.html',{'diff':tefark,'infliste':p, 'mobil':l, 'liste':k, 'addtocart':j, 'htmltablo':htmlmobil,'htmlinfsiparisler':htmlinfsiparisler,'htmlappsflyer':htmlappsflyer,'htmlinflink':htmlinflink, 'userid':id,'gsmnumara':gsmnumara, 'email':email, 'fullname':fullname, 'tarih':tarih, 'durum':durum, 'tablo':tablo})
+  return render(request,'influencer.html')
