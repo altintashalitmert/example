@@ -3,7 +3,6 @@ def get_sec(time_str):
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
 
-@login_required
 def infkontrol(request):
   if request.method == 'POST':
     ordernumberx = request.POST.get('ordernumber')
@@ -54,12 +53,12 @@ def infkontrol(request):
     credentials = service_account.Credentials.from_service_account_file(key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"],)
     client = bigquery.Client(credentials=credentials, project=credentials.project_id,)
     print("Mobil Sorgusu Başladı")
-    mobilkontrol = """select source, channel, pageurl, pagereferrer, ordernumber, receivedat, useragentplatform
+    mobilecontrol = """select source, channel, pageurl, pagereferrer, ordernumber, receivedat, useragentplatform
 from  `davinci_main` a
 where ordernumber = """+ordernumber+"""
 and DATE(receivedat) = """+date+""";
 """
-    query_job = client.query(mobilkontrol)
+    query_job = client.query(mobilecontrol)
     results = query_job.result()
     print(results)
     l=[]
@@ -138,16 +137,16 @@ order by attributed_touch_time desc"""
     except: 
       touchtime=""
       diffsaat=0  
-    infsiparisler = """select id_er, id_user, id_order, sku, id_buyingcategory from `her_summary.indetail_new` where
+    inforders = """select id_er, id_user, id_order, sku, id_buyingcategory from `her_summary.indetail_new` where
 DATE(dt_report_day)="""+date+"""
 and id_influencer = """+infid+""""""
-    print(infsiparisler)
-    query_job = client.query(infsiparisler)
+    print(inforders)
+    query_job = client.query(inforders)
     results = query_job.result()
     print(results)
     df = query_job.result().to_dataframe()
     print(df)
-    htmlinfsiparisler = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
+    htmlinforders = df.to_html(classes = "table table-striped table-bordered text-center no-footer align-center align-middle")
     p=[]
     for row in query_job.result():
       data = row
@@ -167,9 +166,6 @@ and id_influencer = """+infid+""""""
         durum = "Hesaplanamadı"  
         print("Touchtime ve eventtime farkı hesaplanamadı")  
     tablo = "aktif"
-    tefark= "{:.2f}".format(diffsaat)
-    logkadi = request.user
-    logadsoyad = logkadi.first_name +" "+ logkadi.last_name
-    views.influencerlog(logadsoyad, logkadi)          
-    return render(request,'influencer.html',{'diff':tefark,'infliste':p, 'mobil':l, 'liste':k, 'addtocart':j, 'htmltablo':htmlmobil,'htmlinfsiparisler':htmlinfsiparisler,'htmlappsflyer':htmlappsflyer,'htmlinflink':htmlinflink, 'userid':id,'gsmnumara':gsmnumara, 'email':email, 'fullname':fullname, 'tarih':tarih, 'durum':durum, 'tablo':tablo})
-  return render(request,'influencer.html')
+    tefark= "{:.2f}".format(diffsaat)        
+    return render(request,'x.html',{'diff':tefark,'infliste':p, 'mobil':l, 'liste':k, 'addtocart':j, 'htmltablo':htmlmobil,'htmlinforders':htmlinforders,'htmlappsflyer':htmlappsflyer,'htmlinflink':htmlinflink, 'userid':id,'gsmnumara':gsmnumara, 'email':email, 'fullname':fullname, 'tarih':tarih, 'durum':durum, 'tablo':tablo})
+  return render(request,'x.html')
