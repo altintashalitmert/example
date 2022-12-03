@@ -12,8 +12,8 @@ def influencerkontrol(request):
     infid = "'"+infidx+"'"
     url = "http://x-api.x.com/api/token/new"
     payload = json.dumps({
-    "userName": "TECHOPS2",
-    "password": "7fQ-Zr*&<Vk!EJ5r"
+    "userName": "xx",
+    "password": "xx"
   })
     headers = {
     'accept': '*/*',
